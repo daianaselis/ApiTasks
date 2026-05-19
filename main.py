@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine
@@ -37,8 +37,11 @@ def home():
 @app.get("/tasks")
 def get_tasks():
     db: Session = SessionLocal()
+
     tasks = db.query(Task).all()
+
     db.close()
+
     return tasks
 
 
@@ -56,6 +59,7 @@ def create_task(task: TaskCreate):
 
     return new_task
 
+
 @app.delete('/tasks/{task_id}')
 def delete_task(task_id: int):
     db: Session = SessionLocal()
@@ -72,3 +76,21 @@ def delete_task(task_id: int):
 
     return {'message': 'Task eliminada'}
 
+
+@app.put('/tasks/{task_id}')
+def toggle_task(task_id: int):
+    db: Session = SessionLocal()
+
+    task = db.query(Task).filter(Task.id == task_id).first()
+
+    if not task:
+        raise HTTPException(status_code=404, detail='Task no encontrada')
+
+    task.completed = not task.completed
+
+    db.commit()
+    db.refresh(task)
+
+    db.close()
+
+    return task
